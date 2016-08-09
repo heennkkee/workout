@@ -6,6 +6,7 @@ var file = 'data/data.sqlite';
 var http = require('http');
 var sqlite3 = require("sqlite3").verbose();
 var fs = require('fs');
+var rq = require('request');
 
 // the db
 var db = new sqlite3.Database(file);
@@ -15,8 +16,13 @@ var db = new sqlite3.Database(file);
 
 // Create a http server with a callback handling all requests
 var httpServer = http.createServer(function (req, res) {
-    console.log(req.url, req.method);
-    var dest, params, temp, temp2;
+    var dest, params, temp, temp2, post;
+
+    if (req.method === 'POST') {
+        console.log((req));
+        console.log(req.headers.referer);
+    }
+
 
     params = req.url.split('/');
     params = params.slice(1, params.length);
