@@ -6,7 +6,6 @@ var file = 'data/data.sqlite';
 var http = require('http');
 var sqlite3 = require("sqlite3").verbose();
 var fs = require('fs');
-var rq = require('request');
 
 // the db
 var db = new sqlite3.Database(file);
