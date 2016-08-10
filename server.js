@@ -16,49 +16,69 @@ var db = new sqlite3.Database(file);
 
 // Create a http server with a callback handling all requests
 var httpServer = http.createServer(function (req, res) {
-    var dest, params, temp, temp2, post;
+    var url, method, dest, params, fileName, postBody = [], postData, getData;
 
-    if (req.method === 'POST') {
-        console.log((req));
-        console.log(req.headers.referer);
-    }
+    url = req.url.split('?')[0];
+    getData = url.split('?');
+    getData.shift();
+    method = req.method;
+
+    if (method === 'POST') {
+        req.on('data', function (chunk) {
+            postBody.push(chunk);
+        }).on('end', function() {
+            //console.log("postData: ", Buffer.concat(postBody).toString());
+            postData = splitQueryString(Buffer.concat(postBody).toString());
+            switch (postData.command) {
+                case 'newOvning':
+                    db.run('INSERT INTO OVNINGAR (NAMN) VALUES(?)', postData.namn);
+                    res.writeHead(302, {
+                        'Location': req.headers.referer
+                    });
+                    break;
+                default:
+
+            }
+            res.end();
+        });
+
+    } else {
+        params = url.split('/');
+        params = params.slice(1, params.length);
+
+        //our destination url
+        dest = params.shift();
+
+        //Filter the parameters to be undefined instead of stupid stuff
+        params = params.map(function(val){if(val === ''){return undefined}return val;});
+
+        if (dest === 'favicon.ico') {
+            var img = fs.readFileSync('include/media/favicon.ico');
+            res.writeHead(200, {'Content-Type': 'image/ico' });
+            res.end(img, 'binary');
+            return;
+        } else if (dest === 'include') {
+            fileName = params.pop();
+            var file = fs.readFileSync('include/' + params.join('/') + '/' + fileName);
+            res.writeHead(200, {'Content-Type': 'plain/text'});
+            res.end(file, 'binary');
+            return;
+        }
+        console.log("dest: " + dest);
 
 
-    params = req.url.split('/');
-    params = params.slice(1, params.length);
-    dest = params.shift();
+        // START STUFF HERE
+        HTMLStart(res);
 
-    params = params.map(function(val){if(val === ''){return undefined}return val;});
-
-    if (dest === 'favicon.ico') {
-        var img = fs.readFileSync('include/media/favicon.ico');
-        res.writeHead(200, {'Content-Type': 'image/ico' });
-        res.end(img, 'binary');
-        return;
-    }
-    if (dest === 'include') {
-        temp = params.pop();
-        temp2 = params.join('/');
-        var file = fs.readFileSync('include/' + temp2 + '/' + temp);
-        res.writeHead(200, {'Content-Type': 'plain/text'});
-        res.end(file, 'binary');
-        return;
-    }
-    console.log("dest: " + dest);
-
-
-    // START STUFF HERE
-    HTMLStart(res);
-
-    switch (dest) {
-        case 'setup':
+        switch (dest) {
+            case 'setup':
             headEnd(res);
             createTables();
             res.write('<h1>Tabeller skapade.</h1><a href="/">Tillbaka</a>');
             res.write('<br><img src="favicon.ico"></img>');
             end(res);
             break;
-        case 'ovningar':
+            case 'ovningar':
             if (params[0] === undefined || (params[0] === 'ID' && params[1] === undefined)) {
                 db.all("SELECT ID, NAMN FROM OVNINGAR", function(err, rows) {
                     if (rows.length === 0) {
@@ -66,7 +86,8 @@ var httpServer = http.createServer(function (req, res) {
                     } else {
                         res.write('<table>');
                         rows.forEach(function (row) {
-                            res.write("<tr><td>" + row.ID + "</td><td>" + row.TEXT + "</tr>");
+                            console.log(row);
+                            res.write("<tr><td>" + row.ID + "</td><td>" + row.NAMN + "</tr>");
                         });
                         res.write('</table>');
                     }
@@ -81,7 +102,7 @@ var httpServer = http.createServer(function (req, res) {
                         } else {
                             res.write('<table>');
                             rows.forEach(function (row) {
-                                res.write("<tr><td>" + row.ID + "</td><td>" + row.TEXT + "</tr>");
+                                res.write("<tr><td>" + row.ID + "</td><td>" + row.NAMN + "</tr>");
                             });
                             res.write('</table>');
                         }
@@ -92,7 +113,6 @@ var httpServer = http.createServer(function (req, res) {
                     end(res);
                 }
             } else if (params[0] === 'new') {
-                res.write('<h1>Skapa ny övning</h1>');
                 readTemplate('createOvning', res);
                 end(res);
             } else {
@@ -100,11 +120,14 @@ var httpServer = http.createServer(function (req, res) {
                 end(res);
             }
             break;
-        default:
+            default:
             headEnd(res);
             res.write("<h1>Hej Henrik!</h1>");
             end(res);
+        }
     }
+
+
 });
 
 httpServer.listen(port, function () {
@@ -119,12 +142,23 @@ function headEnd(res) {
     res.write('</head><body>');
 }
 
+function splitQueryString(input) {
+    var temp, temp2, x, retObj = {};
+    temp = input.split('&');
+    for (x = 0; x < temp.length; x += 1) {
+        temp2 = temp[x].split('=');
+
+        retObj[temp2[0]] = temp2[1];
+    }
+    return retObj;
+}
+
 function end(res) {
     res.end('</body></html>');
 }
 
 function readTemplate(name, res) {
-    var file = fs.readFileSync('templates/' + name + '.html');
+    var file = fs.readFileSync('include/html/' + name + '.html');
     res.write(file, 'binary');
 }
 
