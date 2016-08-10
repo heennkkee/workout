@@ -16,7 +16,7 @@ var db = new sqlite3.Database(file);
 
 // Create a http server with a callback handling all requests
 var httpServer = http.createServer(function (req, res) {
-    var url, method, dest, params, fileName, postBody = [], postData, getData;
+    var url, method, dest, params, temp, fileName, postBody = [], postData, getData;
 
     url = req.url.split('?')[0];
     getData = url.split('?');
@@ -31,7 +31,8 @@ var httpServer = http.createServer(function (req, res) {
             postData = splitQueryString(Buffer.concat(postBody).toString());
             switch (postData.command) {
                 case 'newOvning':
-                    db.run('INSERT INTO OVNINGAR (NAMN) VALUES(?)', postData.namn);
+                    temp = postData.namn.replace(/[^a-zA-Z0-9]+/g, '*');
+                    db.run('INSERT INTO OVNINGAR (NAMN) VALUES(?)', temp);
                     res.writeHead(302, {
                         'Location': req.headers.referer
                     });
@@ -148,7 +149,7 @@ function splitQueryString(input) {
     for (x = 0; x < temp.length; x += 1) {
         temp2 = temp[x].split('=');
 
-        retObj[temp2[0]] = temp2[1];
+            retObj[temp2[0]] = decodeURIComponent(temp2[1]).replace(/\+/g, ' ');
     }
     return retObj;
 }
