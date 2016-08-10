@@ -1,3 +1,59 @@
-h1 {
-    color: blue;
+body {
+    margin: 0;
+    padding: 0;
+    font-size: 16pt;
+    color: #333;
+    overflow-x: hidden;
+    font-family: Helvetica;
+}
+
+table {
+    font-size: inherit;
+    color: inherit;
+}
+
+.pointer {
+    cursor: pointer;
+}
+
+.header {
+    background-color: hsla(0, 81%, 66%, 1);
+    padding: 5px;
+    width: 100%;
+    text-align: center;
+}
+
+.wrapper {
+    padding: 5px;
+    text-align: center;
+}
+.wrapper table {
+    margin: 0 auto;
+}
+.menu {
+    padding: 0;
+    margin: 0;
+}
+
+.footer {
+    background-color: hsla(53, 81%, 66%, 1);
+    padding: 5px;
+    height: 20px;
+    width: 100%;
+}
+
+.material-icons.big {
+    font-size: 36px;
+}
+
+.material-icons.bigger {
+    font-size: 48px;
+}
+
+a {
+    color: inherit;
+}
+
+.green {
+    color: hsla(92,81%,34%,1);
 }
