@@ -30,6 +30,13 @@ var httpServer = http.createServer(function (req, res) {
             //console.log("postData: ", Buffer.concat(postBody).toString());
             postData = splitQueryString(Buffer.concat(postBody).toString());
             switch (postData.command) {
+                case 'newPass':
+                    console.log(postData);
+                    res.writeHead(302, {
+                        'Location': '/pass'
+                    });
+                    end(res);
+                    break;
                 case 'newOvning':
                     db.run('INSERT INTO OVNINGAR (NAMN) VALUES(?)', postData.namn, function () {
                         res.writeHead(302, {
@@ -64,7 +71,7 @@ var httpServer = http.createServer(function (req, res) {
                     });
                     break;
                 case 'addHistory':
-                    db.run("INSERT INTO HISTORY (PERSON_ID, OVNING_ID, VIKT, ANTAL, DATUM) VALUES(?, ?, ?, ?, datetime('now', 'localtime'))", postData['person_id'], postData['ovning_id'], postData.vikt, postData.antal, function () {
+                    db.run("INSERT INTO HISTORIK (PERSON_ID, OVNING_ID, VIKT, ANTAL, DATUM) VALUES(?, ?, ?, ?, datetime('now', 'localtime'))", postData['person_id'], postData['ovning_id'], postData.vikt, postData.antal, function () {
                         res.writeHead(302, {
                             'Location': req.headers.referer
                         });
@@ -102,6 +109,8 @@ var httpServer = http.createServer(function (req, res) {
 
             if (ext === 'svg') {
                 header = 'image/svg+xml';
+            } else if (ext === 'css') {
+                header = 'text/css';
             }
             res.writeHead(200, {'Content-Type': header});
             res.end(file, 'binary');
@@ -114,26 +123,33 @@ var httpServer = http.createServer(function (req, res) {
         HTMLStart(res);
 
         switch (dest) {
+            case 'pass':
+                if (params[0] === 'new') {
+                    var x, ovningar = '';
+                    db.all('SELECT * FROM OVNINGAR', function (err, rows) {
+                        for (x = 0; x < rows.length; x += 1) {
+                            ovningar += '<p>' + rows[x].NAMN + ' <input type="checkbox" name="ovning" value="' + rows[x].ID + '"></p>';
+                        }
+                        read('newPass', {OVNINGAR: ovningar}, res);
+                        end(res);
+                    });
+                } else {
+                    db.all('SELECT * FROM PASS_VIEW', function (err, rows) {
+                        writeTable(rows, res);
+                        end(res);
+                    });
+                }
+                break;
             case 'setup':
-            createTables();
-            res.write('<h1>Tabeller skapade.</h1><a href="/">Tillbaka</a>');
-            res.write('<br><img src="favicon.ico"></img>');
-            end(res);
-            break;
+                createTables();
+                res.write('<h1>Tabeller skapade.</h1><a href="/">Tillbaka</a>');
+                res.write('<br><img src="favicon.ico"></img>');
+                end(res);
+                break;
             case 'historik':
-                var x;
+                var x, y;
                 db.all('SELECT * FROM HISTORIK_VIEW ORDER BY DATUM ASC', function (err, rows) {
-                    res.write('<table>');
-                    res.write('<tr>');
-                    for (x in rows[0]) {
-                        res.write('<th>' + x + '</th>');
-                    }
-                    res.write('</tr>');
-                    for (x = 0; x < rows.length; x += 1) {
-                        console.log(rows[x]);
-                        res.write('<tr><td>' + rows[x].Person + '</td><td>' + rows[x].Ovning + '</td><td>' + rows[x].VIKT + '</td><td>' + rows[x].ANTAL + '</td><td>' + rows[x].DATUM + '</td></tr>');
-                    }
-                    res.write('</table>');
+                    writeTable(rows, res);
                     end(res);
                 });
                 break;
@@ -170,7 +186,7 @@ var httpServer = http.createServer(function (req, res) {
             }
                 break;
             case '':
-                res.write('startpage');
+                readTemplate('index', res);
                 end(res);
                 break;
             case 'gym':
@@ -246,17 +262,45 @@ httpServer.listen(port, function () {
     console.log((new Date()) + ' HTTP server is listening on port ' + port);
 });
 
+function writeTable(rows, res) {
+    var x, y;
+    res.write('<table>');
+    res.write('<tr>');
+    for (x in rows[0]) {
+        res.write('<th>' + x + '</th>');
+    }
+    res.write('</tr>');
+    for (x = 0; x < rows.length; x += 1) {
+        res.write('<tr>');
+        for (y in rows[x]) {
+            res.write('<td>' + rows[x][y] + '</td>');
+        }
+        res.write('</tr>');
+    }
+    res.write('</table>');
+}
+
 function HTMLStart(res) {
     readTemplate('htmlHead', res);
     readTemplate('header', res);
 }
 
 function splitQueryString(input) {
-    var temp, temp2, x, retObj = {};
+    var temp, keyVal, val, x, retObj = {};
     temp = input.split('&');
     for (x = 0; x < temp.length; x += 1) {
-        temp2 = temp[x].split('=');
-        retObj[temp2[0]] = decodeURIComponent(temp2[1]).replace(/\+/g, ' ').replace(/[^a-zA-Z0-9åÅäÄöÖ\s]+/g, '*');
+        keyVal = temp[x].split('=');
+        val = decodeURIComponent(keyVal[1]).replace(/\+/g, ' ').replace(/[^a-zA-Z0-9åÅäÄöÖ\s]+/g, '*');
+        console.log(typeof retObj[keyVal[0]]);
+        if (typeof retObj[keyVal[0]] === 'undefined') {
+            console.log("was undefined");
+            retObj[keyVal[0]] = val;
+        } else if (typeof retObj[keyVal[0]] === 'object') {
+            retObj[keyVal[0]].push(val);
+        } else {
+            retObj[keyVal[0]] = [retObj[keyVal[0]], val];
+        }
+        console.log(retObj[keyVal[0]], "stop");
     }
     return retObj;
 }
@@ -288,13 +332,22 @@ function createTables() {
         db.run('CREATE TABLE IF NOT EXISTS "PERSONER" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE ON CONFLICT IGNORE , "NAMN" VARCHAR NOT NULL  UNIQUE ON CONFLICT IGNORE, "AKTIV" INTEGER DEFAULT 1)');
         db.run('INSERT INTO PERSONER (NAMN) VALUES("Henrik")');
 
+        db.run('CREATE TABLE IF NOT EXISTS "PASS" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE ON CONFLICT IGNORE , "NAMN" VARCHAR NOT NULL  UNIQUE ON CONFLICT IGNORE)');
+        db.run('INSERT INTO PASS (NAMN) VALUES("Bröst och axlar")');
+
         db.run('CREATE TABLE IF NOT EXISTS "OVNINGAR" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE ON CONFLICT IGNORE , "NAMN" VARCHAR NOT NULL  UNIQUE ON CONFLICT IGNORE )');
         db.run('INSERT INTO OVNINGAR (NAMN) VALUES("Marklyft")');
         db.run('INSERT INTO OVNINGAR (NAMN) VALUES("Bänkpress")');
+        db.run('INSERT INTO OVNINGAR (NAMN) VALUES("Militärpress")');
+
+        db.run('CREATE TABLE IF NOT EXISTS "PASS_OVNINGAR" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE ON CONFLICT IGNORE, "PASS_ID" INTEGER NOT NULL, "OVNING_ID" INTEGER NOT NULL, FOREIGN KEY("PASS_ID") REFERENCES PASS(ID), FOREIGN KEY("OVNING_ID") REFERENCES OVNINGAR(ID), UNIQUE ("PASS_ID", "OVNING_ID") ON CONFLICT IGNORE)');
+        db.run('INSERT INTO PASS_OVNINGAR(PASS_ID, OVNING_ID) VALUES(1, 2)');
+        db.run('INSERT INTO PASS_OVNINGAR(PASS_ID, OVNING_ID) VALUES(1, 3)');
 
         db.run('CREATE TABLE IF NOT EXISTS "HISTORIK" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , "VIKT" DOUBLE NOT NULL , "ANTAL" INTEGER NOT NULL, "PERSON_ID" INTEGER NOT NULL, "OVNING_ID" INTEGER NOT NULL, "DATUM" DATETIME, FOREIGN KEY("PERSON_ID") REFERENCES PERSONER(ID), FOREIGN KEY("OVNING_ID") REFERENCES OVNINGAR(ID))');
 
-        db.run('CREATE VIEW IF NOT EXISTS "historik_view" AS  SELECT p.NAMN AS "Person", o.NAMN AS "Ovning", h.VIKT, h.ANTAL, h.DATUM FROM HISTORIK h JOIN PERSONER p ON h.PERSON_ID = p.ID JOIN OVNINGAR o ON h.OVNING_ID = o.ID');
+        db.run('CREATE VIEW IF NOT EXISTS "HISTORIK_VIEW" AS  SELECT p.NAMN AS "PERSON", o.NAMN AS "OVNING", h.VIKT, h.ANTAL, h.DATUM FROM HISTORIK h JOIN PERSONER p ON h.PERSON_ID = p.ID JOIN OVNINGAR o ON h.OVNING_ID = o.ID');
+        db.run('CREATE VIEW IF NOT EXISTS "PASS_VIEW" AS  SELECT po.ID, p.NAMN, GROUP_CONCAT(o.NAMN) AS "OVNINGAR" FROM PASS_OVNINGAR po JOIN PASS p ON po.PASS_ID = p.ID JOIN OVNINGAR o ON po.OVNING_ID = o.ID')
 
         db.run('CREATE TABLE IF NOT EXISTS "PASS" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE ON CONFLICT IGNORE , "NAMN" VARCHAR NOT NULL  UNIQUE ON CONFLICT IGNORE )', function () {
             console.log("tables created");
