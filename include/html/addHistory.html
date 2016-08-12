@@ -1,20 +1,22 @@
 <div class="card shadow">
     <form action="?" method="POST">
-        <input hidden name="command" value="addHistory">
         <div class="flex">
             <div class="col">
-                <div class="row"><span>Person</span></div>
-                <div class="row"><span>Övning</span></div>
-                <div class="row"><span>Vikt</span></div>
-                <div class="row"><span>Antal</span></div>
+                <span>Person</span>
+                <span>Övning</span>
+                <span>Vikt</span>
+                <span>Antal</span>
             </div>
             <div class="col">
-                <div class="row"><select name="person_id">#PERSONER#</select></div>
-                <div class="row"><select name="ovning_id">#OVNINGAR#</select></div>
-                <div class="row"><input type="number" name="vikt"></div>
-                <div class="row"><input type="number" name="antal"></div>
+                <select name="person_id">#PERSONER#</select>
+                <select name="ovning_id">#OVNINGAR#</select>
+                <input class="number" type="number" name="vikt">
+                <input class="number" type="number" name="antal">
             </div>
         </div>
+
+        <input hidden name="command" value="addHistory">
+        
         <button class="button shadow" onclick="this.form.submit()">Spara</button>
     </form>
 </div>

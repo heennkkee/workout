@@ -18,36 +18,29 @@ form {
 
 .flex {
     display: flex;
-}
-.col {
-    display: inline-flex;
-    justify-content: space-between;
-    flex-direction: column;
-    padding: 0.5em;
-}
-.pointer {
-    cursor: pointer;
+    justify-content: flex-start;
 }
 
-input {
-    font-size: inherit;
+.col {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 0.5em;
 }
-select {
-    font-size: inherit;
+.col * {
+    margin: 0.1em 0;
 }
+
+
 .card {
     border: 1px lightgrey solid;
     border-radius: 2px;
     padding: 0.5em;
+    width: 100%;
 }
 
 .shadow {
-    box-shadow: 0 2px 2px 0 rgba(0,0,0,.14),0 3px 1px -2px rgba(0,0,0,.2),0 1px 5px 0 rgba(0,0,0,.12);
     box-shadow: 0 5px 10px #a9a9a9;
-}
-
-.row {
-    margin: 0.1em 0;
 }
 
 .button {
@@ -57,10 +50,13 @@ select {
     border-radius: 4px;
     padding: 0.25em;
     margin: 0.5em;
+    outline: none;
+    transition: box-shadow 0.2s linear, background-color 0.2s linear;
 }
 
 .button:active {
-
+    box-shadow: 0 10px 20px #a9a9a9;
+    background-color: #a9a9a9;
 }
 /*
 .card:hover {
@@ -76,9 +72,10 @@ select {
 
 .wrapper {
     display: flex;
-    justify-content: space-around;
+    justify-content: flex-start;
+    align-items: stretch;
+    padding: 1em;
     padding-top: 0.5em;
-    padding-bottom: 1em;
 }
 
 .wrapper table {
@@ -103,10 +100,27 @@ select {
     font-size: 48px;
 }
 
-a {
-    color: inherit;
-}
 
+.pointer {
+    cursor: pointer;
+}
 .green {
     color: hsla(92,81%,34%,1);
+}
+
+
+input {
+    width: 200px;
+}
+/*
+GENERAL INHERIT STUFF
+*/
+input {
+    font-size: inherit;
+}
+select {
+    font-size: inherit;
+}
+a {
+    color: inherit;
 }
