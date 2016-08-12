@@ -30,18 +30,37 @@ var httpServer = http.createServer(function (req, res) {
             //console.log("postData: ", Buffer.concat(postBody).toString());
             postData = splitQueryString(Buffer.concat(postBody).toString());
             switch (postData.command) {
-                case 'newPass':
+                case 'editPass':
                     console.log(postData);
-                    res.writeHead(302, {
-                        'Location': '/pass'
+                    db.run('DELETE FROM PASS_OVNINGAR WHERE PASS_ID = ?', postData.PID, function (err, rows) {
+                        db.run('UPDATE PASS SET NAMN = ? WHERE ID = ?', postData.namn, postData.ID);
+                        for (x in postData.aktiv) {
+                            db.run('INSERT INTO PASS_OVNINGAR (PASS_ID, OVNING_ID) VALUES(?, ?)', postData.PID, postData.aktiv[x]);
+                        }
+                        res.writeHead(302, {
+                            'Location': '/pass'
+                        });
+                        end(res);
+                    })
+                    break;
+                case 'newPass':
+                    var x;
+                    db.serialize(function() {
+                        db.run('INSERT INTO PASS (NAMN) VALUES(?)', postData.namn, function () {
+                            for (x in postData.aktiv) {
+                                db.run('INSERT INTO PASS_OVNINGAR (PASS_ID, OVNING_ID) VALUES(?, ?)', this.lastID, postData.aktiv[x]);
+                            }
+                            res.writeHead(302, {
+                                'Location': '/pass'
+                            });
+                            end(res);
+                        });
                     });
-                    end(res);
                     break;
                 case 'newOvning':
                     db.run('INSERT INTO OVNINGAR (NAMN) VALUES(?)', postData.namn, function () {
                         res.writeHead(302, {
                             'Location': '/ovningar'
-                            // 'Location': '/ovningar/edit/' + this.lastID
                         });
                         res.end();
                     });
@@ -127,15 +146,48 @@ var httpServer = http.createServer(function (req, res) {
                 if (params[0] === 'new') {
                     var x, ovningar = '';
                     db.all('SELECT * FROM OVNINGAR', function (err, rows) {
-                        for (x = 0; x < rows.length; x += 1) {
-                            ovningar += '<p>' + rows[x].NAMN + ' <input type="checkbox" name="ovning" value="' + rows[x].ID + '"></p>';
+                        for (x in rows) {
+                            ovningar += '<label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="' + rows[x].NAMN + '">';
+                            ovningar += '<input type="checkbox" id="' + rows[x].NAMN + '" value="' + rows[x].ID + '" name="aktiv" class="mdl-switch__input">';
+                            ovningar += '<span class="mdl-switch__label">' + rows[x].NAMN + '</span>';
+                            ovningar += '</label>';
                         }
                         read('newPass', {OVNINGAR: ovningar}, res);
                         end(res);
                     });
+                } else if (params[0] === 'edit') {
+                    var id = Number(params[1]), passNAMN, passID, aktivaOvningar = [], ovningar = '';
+                    if (!isNaN(id)) {
+                        db.all("SELECT p.ID AS 'PID', p.NAMN AS 'PNAMN', o.ID AS 'OID' FROM PASS_OVNINGAR po JOIN PASS p ON po.PASS_ID = p.ID JOIN OVNINGAR o ON po.OVNING_ID = o.ID WHERE p.ID = ?", id, function (err, rows) {
+                            passNAMN = rows[0].PNAMN;
+                            passID = rows[0].PID;
+                            for (x in rows) {
+                                aktivaOvningar.push(rows[x].OID);
+                            }
+                            db.all("SELECT * FROM OVNINGAR", function (err, rows) {
+                                for (x in rows) {
+                                    ovningar += '<label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="' + rows[x].NAMN + '">';
+                                    ovningar += '<input ' + ((aktivaOvningar.indexOf(rows[x].ID) > -1) ? 'checked' : '') + ' type="checkbox" id="' + rows[x].NAMN + '" value="' + rows[x].ID + '" name="aktiv" class="mdl-switch__input">';
+                                    ovningar += '<span class="mdl-switch__label">' + rows[x].NAMN + '</span>';
+                                    ovningar += '</label>';
+                                }
+
+                                read('editPass', {PID: passID, PNAMN: passNAMN, OVNINGAR: ovningar}, res);
+                                end(res);
+                            });
+
+                        });
+                    } else {
+                        res.write('<p>ID <code>' + id + '</code> is not a number.</p>');
+                        end(res);
+                    }
                 } else {
+                    var pass = '', x;
                     db.all('SELECT * FROM PASS_VIEW', function (err, rows) {
-                        writeTable(rows, res);
+                        for (x in rows) {
+                            pass += '<tr onclick="edit(' + "'pass'" + ', ' + rows[x].ID + ')" class="pointer"><td class="mdl-data-table__cell--non-numeric">' + rows[x].NAMN + '</td><td class="mdl-data-table__cell--non-numeric">' + rows[x].OVNINGAR + '</td></tr>\n';
+                        }
+                        read('showPass', {BODYROWS: pass}, res);
                         end(res);
                     });
                 }
@@ -155,7 +207,7 @@ var httpServer = http.createServer(function (req, res) {
                 break;
             case 'ovningar':
             if (params[0] === 'new') {
-                readTemplate('createOvning', res);
+                readTemplate('newOvning', res);
                 end(res);
             } else if (params[0] === 'edit') {
                 var id = Number(params[1]);
@@ -169,17 +221,16 @@ var httpServer = http.createServer(function (req, res) {
                     end(res);
                 }
             } else {
-                readTemplate('ovningar', res);
                 db.all("SELECT ID, NAMN FROM OVNINGAR", function(err, rows) {
+                    var bodyRows = '';
                     if (rows.length === 0) {
                         res.write('<p>Inga övningar att visa.</p>');
                     } else {
-                        res.write('<table>');
                         rows.forEach(function (row) {
-                            console.log(row);
-                            res.write("<tr><td>" + row.ID + "</td><td>" + row.NAMN + "</td><td><a class='pointer' href='/ovningar/edit/" + row.ID + "'><i class='me material-icons'>mode_edit</i></a></td></tr>");
+                            bodyRows += '<tr onclick="edit(' + "'ovningar'" + ', ' + row.ID + ')" class="pointer"><td class="mdl-data-table__cell--non-numeric">' + row.NAMN + '</td></tr>\n';
                         });
-                        res.write('</table>');
+                        read('showOvningar', {BODYROWS: bodyRows}, res);
+
                     }
                     end(res);
                 });
@@ -189,7 +240,7 @@ var httpServer = http.createServer(function (req, res) {
                 readTemplate('index', res);
                 end(res);
                 break;
-            case 'gym':
+            case 'resultat':
                 var check = false, check1 = false, personer = '', ovningar = '', x;
                 db.serialize(function () {
                     db.all('SELECT ID, NAMN FROM PERSONER WHERE AKTIV = 1', function (err, rows) {
@@ -231,19 +282,15 @@ var httpServer = http.createServer(function (req, res) {
                         end(res);
                     }
                 } else {
-                    readTemplate('personer', res);
                     db.all("SELECT ID, NAMN, AKTIV FROM PERSONER", function(err, rows) {
+                        var bodyRows = '';
                         if (rows.length === 0) {
-                            res.write('<p>Inga personer registrerade.</p>');
+                            res.write('<p>Inga personer att visa.</p>');
                         } else {
-                            res.write('<table>');
                             rows.forEach(function (row) {
-                                console.log(row);
-                                res.write("<tr><td>" + row.ID + "</td><td>" + row.NAMN + "</td>" +
-                                "<td>- " + ((row.AKTIV === 1) ? 'Aktiv' : 'Ej aktiv') + "</td>" +
-                                "<td><a class='pointer' href='/personer/edit/" + row.ID + "'><i class='me material-icons'>mode_edit</i></a></tr>");
+                                bodyRows += '<tr onclick="edit(' + "'personer'" + ', ' + row.ID + ')" class="pointer"><td class="mdl-data-table__cell--non-numeric">' + row.NAMN + '</td><td class="mdl-data-table__cell--non-numeric">' + ((row.AKTIV === 1) ? 'Aktiv' : 'Ej aktiv') + '</td></tr>\n';
                             });
-                            res.write('</table>');
+                            read('showPersoner', {BODYROWS: bodyRows}, res);
                         }
                         end(res);
                     });
@@ -291,7 +338,6 @@ function splitQueryString(input) {
     for (x = 0; x < temp.length; x += 1) {
         keyVal = temp[x].split('=');
         val = decodeURIComponent(keyVal[1]).replace(/\+/g, ' ').replace(/[^a-zA-Z0-9åÅäÄöÖ\s]+/g, '*');
-        console.log(typeof retObj[keyVal[0]]);
         if (typeof retObj[keyVal[0]] === 'undefined') {
             console.log("was undefined");
             retObj[keyVal[0]] = val;
@@ -300,7 +346,6 @@ function splitQueryString(input) {
         } else {
             retObj[keyVal[0]] = [retObj[keyVal[0]], val];
         }
-        console.log(retObj[keyVal[0]], "stop");
     }
     return retObj;
 }
@@ -347,7 +392,7 @@ function createTables() {
         db.run('CREATE TABLE IF NOT EXISTS "HISTORIK" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , "VIKT" DOUBLE NOT NULL , "ANTAL" INTEGER NOT NULL, "PERSON_ID" INTEGER NOT NULL, "OVNING_ID" INTEGER NOT NULL, "DATUM" DATETIME, FOREIGN KEY("PERSON_ID") REFERENCES PERSONER(ID), FOREIGN KEY("OVNING_ID") REFERENCES OVNINGAR(ID))');
 
         db.run('CREATE VIEW IF NOT EXISTS "HISTORIK_VIEW" AS  SELECT p.NAMN AS "PERSON", o.NAMN AS "OVNING", h.VIKT, h.ANTAL, h.DATUM FROM HISTORIK h JOIN PERSONER p ON h.PERSON_ID = p.ID JOIN OVNINGAR o ON h.OVNING_ID = o.ID');
-        db.run('CREATE VIEW IF NOT EXISTS "PASS_VIEW" AS  SELECT po.ID, p.NAMN, GROUP_CONCAT(o.NAMN) AS "OVNINGAR" FROM PASS_OVNINGAR po JOIN PASS p ON po.PASS_ID = p.ID JOIN OVNINGAR o ON po.OVNING_ID = o.ID')
+        db.run('CREATE VIEW IF NOT EXISTS "PASS_VIEW" AS  SELECT p.ID, p.NAMN, GROUP_CONCAT(o.NAMN) AS "OVNINGAR" FROM PASS_OVNINGAR po JOIN PASS p ON po.PASS_ID = p.ID JOIN OVNINGAR o ON po.OVNING_ID = o.ID GROUP BY p.NAMN')
 
         db.run('CREATE TABLE IF NOT EXISTS "PASS" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE ON CONFLICT IGNORE , "NAMN" VARCHAR NOT NULL  UNIQUE ON CONFLICT IGNORE )', function () {
             console.log("tables created");

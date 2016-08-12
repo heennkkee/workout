@@ -1,8 +1,29 @@
-<form action='?' method='POST'>
-    <h2>Ny person</h2>
-    <input hidden name="command" value="editPerson">
-    <input hidden name="id" value="#ID#">
-    <p>Namn <input name="namn" type="text" value="#NAMN#"></p>
-    <p>Aktiv <input name="aktiv" type="checkbox" #AKTIV#></p>
-    <button onclick="this.form.submit()" class="button shadow">Uppdatera</button>
-</form>
+<div class="mdl-grid">
+    <div class="mdl-cell mdl-cell--1-col">
+        <div class="mdl-card mdl-shadow--2dp">
+            <main class="mdl-layout__content">
+                <div class="mdl-card__title mdl-color--primary mdl-color-text--white">
+                    <h2 class="mdl-card__title-text">Redigera #NAMN#</h2>
+                </div>
+                <div class="mdl-card__supporting-text">
+                    <form action="?" method="POST">
+                        <input hidden name="id" value="#ID#">
+                        <input hidden name="command" value="editPerson">
+
+                        <div class="mdl-textfield mdl-js-textfield">
+                            <input class="mdl-textfield__input" type="text" name="namn" value="#NAMN#" id="namn">
+                            <label class="mdl-textfield__label" for="namn">Namn</label>
+                        </div>
+                        <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="aktiv">
+                            <input type="checkbox" id="aktiv" name="aktiv" class="mdl-switch__input" #AKTIV#>
+                            <span class="mdl-switch__label">Aktiv</span>
+                        </label>
+                        <div class="mdl-card__actions align-right">
+                            <button class="mdl-button mdl-js-button mdl-button--colored mdl-js-ripple-effect">Uppdatera</button>
+                        </div>
+                    </form>
+                </div>
+            </main>
+        </div>
+    </div>
+</div>
