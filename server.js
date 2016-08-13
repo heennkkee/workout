@@ -249,7 +249,7 @@ var httpServer = http.createServer(function (req, res) {
                         }
                         check = true;
                         if (check && check1) {
-                            read('addHistory', {PERSONER: personer, OVNINGAR: ovningar}, res);
+                            read('newHistory', {PERSONER: personer, OVNINGAR: ovningar}, res);
                             end(res);
                         }
                     });
@@ -259,7 +259,7 @@ var httpServer = http.createServer(function (req, res) {
                         }
                         check1 = true;
                         if (check && check1) {
-                            read('addHistory', {PERSONER: personer, OVNINGAR: ovningar}, res);
+                            read('newHistory', {PERSONER: personer, OVNINGAR: ovningar}, res);
                             end(res);
                         }
                     });
