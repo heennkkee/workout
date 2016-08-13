@@ -6,6 +6,31 @@ var file = 'data/data.sqlite';
 var http = require('http');
 var sqlite3 = require("sqlite3").verbose();
 var fs = require('fs');
+var nodemailer = require('nodemailer');
+
+var transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'henrik.aronsson.94@gmail.com',
+        pass: 'djsuwcsqtizfiiwh'
+    }
+});
+
+// setup e-mail data with unicode symbols
+var mailOptions = {
+    from: 'henrik.aronsson.94@gmail.com', // sender address
+    to: 'henrik.aronsson.94@gmail.com', // list of receivers
+    subject: 'Verification code', // Subject line
+    text: '#CODE' // plaintext body
+};
+
+// send mail with defined transport object
+transporter.sendMail(mailOptions, function(error, info){
+    if(error){
+        return console.log(error);
+    }
+    console.log('Message sent: ' + info.response);
+});
 
 // the db
 var db = new sqlite3.Database(file);
