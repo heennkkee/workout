@@ -1,0 +1,26 @@
+<div class="mdl-grid">
+    <div class="mdl-cell mdl-cell--4-col">
+        <div class="mdl-card mdl-shadow--2dp no-width">
+            <main class="mdl-layout__content">
+                <div class="mdl-card__title mdl-color--accent">
+                    <h2 class="mdl-card__title-text">Validering</h2>
+                </div>
+                <div class="mdl-card__supporting-text">
+                    <p>Validera med koden från ditt e-mail.</p>
+                    #RESULT#
+                    <form action="?" method="POST">
+                        <input hidden name="command" value="validateCode">
+                        <input hidden name="email" value="#EMAIL#">
+                        <div class="mdl-textfield mdl-js-textfield">
+                            <input class="mdl-textfield__input" type="number" name="code" id="code">
+                            <label class="mdl-textfield__label" for="code">Verifieringskod</label>
+                        </div>
+                        <div class="mdl-card__actions align-right">
+                            <button class="mdl-button mdl-js-button mdl-button--colored mdl-js-ripple-effect">Validera</button>
+                        </div>
+                    </form>
+                </div>
+            </main>
+        </div>
+    </div>
+</div>

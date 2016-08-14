@@ -24,6 +24,7 @@
     "finalhandler": "^0.5.0",
     "request": "^2.74.0",
     "serve-favicon": "^2.3.0",
+    "speakeasy": "^2.0.0",
     "sqlite3": "^3.1.4"
   }
 }
