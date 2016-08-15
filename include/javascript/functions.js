@@ -1,14 +1,21 @@
 function edit(target, id) {
-    window.location = target + '/edit/' + id;
+    var loc = myUrl() + target + '/edit/' + id;
+    window.location = loc;
 }
 
 function newLink(target) {
-    window.location = target + '/new';
+    var loc = myUrl() + target + '/new';
+    window.location = loc;
 }
 
 function goTo(target) {
     event.preventDefault();
-    window.location = target;
+    var loc = myUrl() + target;
+    window.location = loc;
+}
+
+function myUrl() {
+    return 'http://lushi.asuscomm.com:1337/';
 }
 
 function validate(form) {
