@@ -16,6 +16,7 @@ function goTo(target) {
 
 function myUrl() {
     return 'http://lushi.asuscomm.com:1337/';
+
 }
 
 function validate(form) {
