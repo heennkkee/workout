@@ -162,7 +162,7 @@ var httpServer = http.createServer(function (req, res) {
                     });
                     break;
                 case 'newPerson':
-                    db.run('INSERT INTO PERSONER (NAMN) VALUES(?)', postData.namn, function () {
+                    db.run('INSERT INTO PERSONER (NAMN, MAIL) VALUES(?, ?)', postData.namn, postData.email, function () {
                         res.writeHead(302, {
                             'Location': '/personer'
                         });
@@ -170,7 +170,7 @@ var httpServer = http.createServer(function (req, res) {
                     });
                     break;
                 case 'editPerson':
-                    db.run('UPDATE PERSONER SET NAMN = ?, AKTIV = ? WHERE ID = ?', postData.namn, ((postData.aktiv === undefined) ? 0 : 1), postData.id, function () {
+                    db.run('UPDATE PERSONER SET NAMN = ?, AKTIV = ?, MAIL = ? WHERE ID = ?', postData.namn, ((postData.aktiv === undefined) ? 0 : 1), postData.email, postData.id, function () {
                         res.writeHead(302, {
                             'Location': '/personer'
                         });
@@ -225,8 +225,9 @@ var httpServer = http.createServer(function (req, res) {
             return;
         }
         console.log("dest: " + dest);
+        if (dest === 'setup') {
 
-        if (jar.get('shortCookie') !== undefined) {
+        } else if (jar.get('shortCookie') !== undefined) {
             console.log('user is OK, proceed', jar.get('shortCookie'));
         } else if (jar.get('longCookie') === undefined) {
             console.log('user need to validate');
@@ -387,7 +388,7 @@ function switchDest(res, req, dest, params) {
         case 'resultat':
         var check = false, check1 = false, personer = '', ovningar = '', x;
         db.serialize(function () {
-            db.all('SELECT ID, NAMN FROM PERSONER WHERE AKTIV = 1', function (err, rows) {
+            db.all("SELECT ID, NAMN, CASE WHEN MAIL = ? THEN 1 ELSE 0 END AS 'sort' FROM PERSONER WHERE AKTIV = 1 ORDER BY 'sort' DESC", jar.get('shortCookie'), function (err, rows) {
                 for (x = 0; x < rows.length; x += 1) {
                     personer += '<option value="' + rows[x].ID + '">' + rows[x].NAMN + '</option>';
                 }
@@ -417,8 +418,8 @@ function switchDest(res, req, dest, params) {
         } else if (params[0] === 'edit') {
             id = Number(params[1]);
             if (!isNaN(id)) {
-                db.get('SELECT NAMN, AKTIV FROM PERSONER WHERE ID = ?', id, function (err, row) {
-                    read('editPerson', {ID: id, NAMN: row.NAMN, AKTIV: ((row.AKTIV === 1) ? 'checked' : '')}, res);
+                db.get('SELECT NAMN, AKTIV, MAIL FROM PERSONER WHERE ID = ?', id, function (err, row) {
+                    read('editPerson', {ID: id, EMAIL: row.MAIL, NAMN: row.NAMN, AKTIV: ((row.AKTIV === 1) ? 'checked' : '')}, res);
                     end(res);
                 });
             } else {
@@ -510,8 +511,8 @@ function createTables() {
     console.log("creating tables");
     db.serialize(function () {
 
-        db.run('CREATE TABLE IF NOT EXISTS "PERSONER" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE ON CONFLICT IGNORE , "NAMN" VARCHAR NOT NULL  UNIQUE ON CONFLICT IGNORE, "AKTIV" INTEGER DEFAULT 1)');
-        db.run('INSERT INTO PERSONER (NAMN) VALUES("Henrik")');
+        db.run('CREATE TABLE IF NOT EXISTS "PERSONER" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE ON CONFLICT IGNORE , "NAMN" VARCHAR NOT NULL  UNIQUE ON CONFLICT IGNORE, "AKTIV" INTEGER DEFAULT 1, "MAIL" VARCHAR UNIQUE ON CONFLICT IGNORE)');
+        db.run('INSERT INTO PERSONER (NAMN, MAIL) VALUES("Henrik", "henrik.aronsson.94@gmail.com")');
 
         db.run('CREATE TABLE IF NOT EXISTS "PASS" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE ON CONFLICT IGNORE , "NAMN" VARCHAR NOT NULL  UNIQUE ON CONFLICT IGNORE)');
         db.run('INSERT INTO PASS (NAMN) VALUES("Bröst och axlar")');
@@ -529,11 +530,11 @@ function createTables() {
 
         db.run('CREATE TABLE IF NOT EXISTS "LOGINS" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , "MAIL" VARCHAR NOT NULL , "HASH" VARCHAR NOT NULL )');
 
-        db.run('CREATE TABLE IF NOT EXISTS "WHITELIST" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , "MAIL" VARCHAR NOT NULL  UNIQUE , "LASTMAIL" DATETIME, "LASTLASTMAIL" DATETIME)');
-        db.run('INSERT INTO WHITELIST(MAIL), VALUES("henrik.aronsson.94@gmail.com")');
-        db.run('INSERT INTO WHITELIST(MAIL), VALUES("rolf@blidb.org")');
-        db.run('INSERT INTO WHITELIST(MAIL), VALUES("karlmagnus.karlsson@hotmail.com")');
-        db.run('INSERT INTO WHITELIST(MAIL), VALUES("magnus.kjellin@hotmail.se")');
+        db.run('CREATE TABLE IF NOT EXISTS "WHITELIST" ("ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , "MAIL" VARCHAR NOT NULL  UNIQUE , "LASTMAIL" DATETIME, "UNUSED_CODES" INTEGER DEFAULT 0)');
+        db.run('INSERT INTO WHITELIST(MAIL) VALUES("henrik.aronsson.94@gmail.com")');
+        db.run('INSERT INTO WHITELIST(MAIL) VALUES("rolf@blidb.org")');
+        db.run('INSERT INTO WHITELIST(MAIL) VALUES("karlmagnus.karlsson@hotmail.com")');
+        db.run('INSERT INTO WHITELIST(MAIL) VALUES("magnus.kjellin@hotmail.se")');
 
         db.run('CREATE VIEW IF NOT EXISTS "HISTORIK_VIEW" AS  SELECT p.NAMN AS "PERSON", o.NAMN AS "OVNING", h.VIKT, h.ANTAL, h.DATUM FROM HISTORIK h JOIN PERSONER p ON h.PERSON_ID = p.ID JOIN OVNINGAR o ON h.OVNING_ID = o.ID');
         db.run('CREATE VIEW IF NOT EXISTS "PASS_VIEW" AS  SELECT p.ID, p.NAMN, GROUP_CONCAT(o.NAMN) AS "OVNINGAR" FROM PASS_OVNINGAR po JOIN PASS p ON po.PASS_ID = p.ID JOIN OVNINGAR o ON po.OVNING_ID = o.ID GROUP BY p.NAMN', function () {
