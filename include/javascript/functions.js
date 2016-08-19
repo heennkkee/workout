@@ -15,7 +15,6 @@ function goTo(target) {
 }
 
 function myUrl() {
-    return 'http://localhost/';
     return 'http://lushi.asuscomm.com:1337/';
 
 }
