@@ -338,18 +338,19 @@ function switchDest(res, req, dest, params) {
         }
         break;
         case 'setup':
-        createTables();
-        res.write('<h1>Tabeller skapade.</h1><a href="/">Tillbaka</a>');
-        res.write('<br><img src="favicon.ico"></img>');
-        end(res);
-        break;
-        case 'historik':
-        var x, y;
-        db.all('SELECT * FROM HISTORIK_VIEW ORDER BY DATUM ASC', function (err, rows) {
-            writeTable(rows, res);
+            createTables();
+            res.write('<h1>Tabeller skapade.</h1><a href="/">Tillbaka</a>');
+            res.write('<br><img src="favicon.ico"></img>');
             end(res);
-        });
-        break;
+            break;
+        case 'historik':
+            var x, y;
+            db.all('SELECT * FROM HISTORIK_VIEW ORDER BY DATUM ASC', function (err, rows) {
+                var historik = generateRows(rows);
+                read('showHistorik', {BODYROWS:historik}, res);
+                end(res);
+            });
+            break;
         case 'ovningar':
         if (params[0] === 'new') {
             readTemplate('newOvning', res);
@@ -447,22 +448,17 @@ function switchDest(res, req, dest, params) {
     }
 }
 
-function writeTable(rows, res) {
-    var x, y;
-    res.write('<table>');
-    res.write('<tr>');
-    for (x in rows[0]) {
-        res.write('<th>' + x + '</th>');
-    }
-    res.write('</tr>');
+function generateRows(rows) {
+    var x, y, temp = "";
     for (x = 0; x < rows.length; x += 1) {
-        res.write('<tr>');
+        temp += '<tr>';
         for (y in rows[x]) {
-            res.write('<td>' + rows[x][y] + '</td>');
+            temp += '<td>' + rows[x][y] + '</td>';
         }
-        res.write('</tr>');
+        temp += '</tr>';
     }
-    res.write('</table>');
+
+    return temp;
 }
 
 function HTMLStart(res) {
