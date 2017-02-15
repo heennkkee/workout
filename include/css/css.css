@@ -6,25 +6,22 @@
     color: red;
 }
 
-
-
 @media (max-width: 360px) {
     .mdl-card.no-width {
         width: initial;
     }
-    .mdl-button.bottom-right {
-        top: -28px;
-        z-index: 4;
-        left: calc(100% - 75px);
-    }
 }
 @media (min-width: 360px) {
-    .mdl-button.bottom-right {
-        z-index: 4;
-        left: 250px;
-        top: -28px;
-    }
+
 }
+
+.mdl-button.absolute-bottom-right {
+    position: absolute;
+    z-index: 4;
+    right: 20px;
+    bottom: 20px;
+}
+
 .header {
     background-color: hsla(0, 81%, 66%, 1);
     padding: 5px;
