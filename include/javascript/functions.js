@@ -15,8 +15,8 @@ function goTo(target) {
 }
 
 function myUrl() {
+    return location.origin + '/';
     return 'http://lushi.asuscomm.com:1337/';
-
 }
 
 function validate(form) {
