@@ -1,6 +1,7 @@
 /*global require, console */
 var port = 80;
 var file = 'data/data.sqlite';
+var g_title = 'Ryggbiffarna';
 
 // Require the modules we need
 var http = require('http');
@@ -13,6 +14,7 @@ var speakeasy = require('speakeasy');
 
 var jar;
 var secret = speakeasy.generateSecret({length: 20});
+
 
 var transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -463,7 +465,7 @@ function generateRows(rows) {
 
 function HTMLStart(res) {
     readTemplate('htmlHead', res);
-    readTemplate('header', res);
+    read('header', {TITLE: g_title}, res);
 }
 
 function splitQueryString(input) {
